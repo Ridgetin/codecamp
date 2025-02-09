@@ -1,34 +1,37 @@
 const express = require("express");
+const cors = require("cors");
 const app = express();
+
+app.use(cors());
 
 app.get("/api/:date?", (req, res) => {
     let { date } = req.params;
 
-    // If date is undefined, use current date
+    // If no date is provided, use the current date
     if (!date) {
-        let now = new Date();
+        const now = new Date();
         return res.json({ unix: now.getTime(), utc: now.toUTCString() });
     }
 
-    // If date is a number (timestamp), convert it properly
+    // If date is a pure number (Unix timestamp), ensure it's treated as a number
     if (!isNaN(date)) {
-        date = parseInt(date); // Convert to number
+        date = parseInt(date);
     }
 
-    let parsedDate = new Date(date);
+    const parsedDate = new Date(date);
 
-    // Check for invalid date
-    if (parsedDate.toString() === "Invalid Date") {
+    // Check if date is invalid
+    if (isNaN(parsedDate.getTime())) {
         return res.json({ error: "Invalid Date" });
     }
 
-    // Return the correct format
+    // Return valid response
     res.json({
         unix: parsedDate.getTime(),
         utc: parsedDate.toUTCString()
     });
 });
 
-// Start server
+// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
