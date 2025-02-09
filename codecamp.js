@@ -1,46 +1,32 @@
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
-const dns = require("dns");
-const urlParser = require("url");
+const multer = require("multer");
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: false }));
 
-let urlDatabase = {}; // Store URLs with short codes
-let counter = 1; // Short URL counter
+// Configure Multer for file upload handling
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Validate a URL
-function isValidUrl(url) {
-    const parsedUrl = urlParser.parse(url);
-    return parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:";
-}
-
-// POST: Create a short URL
-app.post("/api/shorturl", (req, res) => {
-    const originalUrl = req.body.url;
-
-    if (!isValidUrl(originalUrl)) {
-        return res.json({ error: "invalid url" });
-    }
-
-    const shortUrl = counter++;
-    urlDatabase[shortUrl] = originalUrl; // Store the mapping
-
-    res.json({ original_url: originalUrl, short_url: shortUrl });
+// Serve HTML form at root
+app.get("/", (req, res) => {
+    res.send(`
+        <form action="/api/fileanalyse" enctype="multipart/form-data" method="POST">
+            <input type="file" name="upfile" />
+            <button type="submit">Upload</button>
+        </form>
+    `);
 });
 
-// GET: Redirect to original URL
-app.get("/api/shorturl/:short_url", (req, res) => {
-    const shortUrl = req.params.short_url;
-    const originalUrl = urlDatabase[shortUrl];
+// Handle file upload
+app.post("/api/fileanalyse", upload.single("upfile"), (req, res) => {
+    if (!req.file) return res.json({ error: "No file uploaded" });
 
-    if (originalUrl) {
-        return res.redirect(originalUrl);
-    } else {
-        return res.json({ error: "No short URL found" });
-    }
+    res.json({
+        name: req.file.originalname,
+        type: req.file.mimetype,
+        size: req.file.size
+    });
 });
 
 // Start the server
